@@ -6,19 +6,21 @@ Raw wearable export (Zepp / Mi Band ecosystem) covering **2026-05-12 to 2026-07-
 
 ### Raw data (as exported from the device app)
 
+All raw export categories live under `Health Data (12-05-2026 to 20-07-2026)/`:
+
 | Folder | Contents |
 |---|---|
-| `USER/` | Profile: name, gender code, height, weight, birthday |
-| `BODY/` | Single body-composition reading (2026-05-24): weight, height, BMI |
-| `HEALTH_DATA/` | Body measurements (arm/calf/chest/hip/thigh/waist) — empty, never filled in |
-| `ACTIVITY/` | Daily steps, distance, run distance, activity calories |
-| `ACTIVITY_MINUTE/` | Minute-level step counts (only minutes with steps recorded) |
-| `ACTIVITY_STAGE/` | ~675 continuous-movement segments (start/stop time, distance, calories, steps) |
-| `SLEEP/` | Daily sleep summary: deep/light/REM minutes, wake time, sleep start/stop, naps |
-| `SLEEP_MINUTE/` | ~30,600 minute-by-minute sleep-stage entries with heart rate & respiratory rate |
-| `HEARTRATE_AUTO/` | ~97,000 automatic heart-rate readings (roughly per-minute) |
-| `HEARTRATE/` | Manual heart-rate readings — empty, none logged |
-| `SPORT/` | 66 logged workout sessions: type code, start time, duration, pace, distance, calories |
+| `Health Data (12-05-2026 to 20-07-2026)/USER/` | Profile: name, gender code, height, weight, birthday |
+| `Health Data (12-05-2026 to 20-07-2026)/BODY/` | Single body-composition reading (2026-05-24): weight, height, BMI |
+| `Health Data (12-05-2026 to 20-07-2026)/HEALTH_DATA/` | Body measurements (arm/calf/chest/hip/thigh/waist) — empty, never filled in |
+| `Health Data (12-05-2026 to 20-07-2026)/ACTIVITY/` | Daily steps, distance, run distance, activity calories |
+| `Health Data (12-05-2026 to 20-07-2026)/ACTIVITY_MINUTE/` | Minute-level step counts (only minutes with steps recorded) |
+| `Health Data (12-05-2026 to 20-07-2026)/ACTIVITY_STAGE/` | ~675 continuous-movement segments (start/stop time, distance, calories, steps) |
+| `Health Data (12-05-2026 to 20-07-2026)/SLEEP/` | Daily sleep summary: deep/light/REM minutes, wake time, sleep start/stop, naps |
+| `Health Data (12-05-2026 to 20-07-2026)/SLEEP_MINUTE/` | ~30,600 minute-by-minute sleep-stage entries with heart rate & respiratory rate |
+| `Health Data (12-05-2026 to 20-07-2026)/HEARTRATE_AUTO/` | ~97,000 automatic heart-rate readings (roughly per-minute) |
+| `Health Data (12-05-2026 to 20-07-2026)/HEARTRATE/` | Manual heart-rate readings — empty, none logged |
+| `Health Data (12-05-2026 to 20-07-2026)/SPORT/` | 66 logged workout sessions: type code, start time, duration, pace, distance, calories |
 
 ### Compiled output
 
