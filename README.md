@@ -33,13 +33,30 @@ Each period folder has the same 11 category subfolders:
 
 ### Compiled output
 
+- **[`report/REPORT.md`](report/REPORT.md)**: the full P1 vs P2 comparison and trend analysis. It covers every metric, with 17 charts (in `report/charts/`), significance tests, 140-day trend lines, and how training, sleep and heart rate affect each other.
+- **`ANALYSIS.md`**: short summary of the key findings, plus the maintenance-calorie method.
 - **`Daily_Health_Summary.xlsx`**: all 140 days merged from both exports. Tabs:
-  - **Daily Summary**: one row per day with period, week, steps, distance, activity and workout calories, active minutes, resting/avg/max heart rate, workouts, and the full sleep-stage breakdown.
-  - **Workout Sessions**: all 139 workouts with inferred activity name, duration, distance, pace (min/km) and calories per minute.
+  - **Daily Summary**: one row per day covering:
+    - period and week
+    - steps, distance, active minutes, activity and workout calories
+    - resting, average, max and sleeping heart rate, plus vigorous minutes
+    - workouts
+    - the full sleep-stage breakdown, with the times you fell asleep and woke up
+    - estimated calories burned
+  - **Workout Sessions**: all 139 workouts with inferred activity name, start time, duration, distance, pace (min/km), calories per minute, and average and max heart rate during the session.
   - **Period Comparison**: P1 vs P2 side by side, with change and % change. Every value is a live formula over the other tabs.
-  - **Weekly Trends**: weekly averages for steps, resting HR, sleep and workouts, with line charts.
+  - **Weekly Trends**: weekly averages for steps, resting and sleeping HR, sleep and workouts, with line charts.
   - **Notes**: every assumption made while merging and aggregating the raw CSVs.
-- **`ANALYSIS.md`**: written findings, the P1 vs P2 comparison, and maintenance-calorie estimates.
+
+### Scripts
+
+| Script | What it does |
+|---|---|
+| `scripts/healthdata.py` | Loads and merges every `Health Data*` export, removes duplicate days, converts all times to IST, and builds the daily and per-workout tables. |
+| `scripts/build_summary.py` | Rebuilds `Daily_Health_Summary.xlsx`. Open it in Excel once afterwards so the formulas calculate. |
+| `scripts/build_report.py` | Regenerates the charts in `report/charts/` and prints the statistics used in `REPORT.md`. |
+
+Requires Python 3 with `pandas`, `numpy`, `scipy`, `matplotlib` and `openpyxl`.
 
 ## Known data-quality caveats
 
@@ -49,8 +66,16 @@ Each period folder has the same 11 category subfolders:
 - **Sleep `naps` field is a placeholder.** Every nap timestamp in both exports reads `2024-10-04`, well outside the real date range, so only nap *counts* are usable.
 - **Workout names are inferred, not labeled by the device.** Zepp exports sessions as numeric type codes with no name. Labels were inferred from each code's distance, pace and intensity. Two codes are new in P2: 191 (indoor, high intensity, from 2026-08-19) and 9 (one 21 km session at ~16.6 km/h, most likely cycling).
 - **GPS dropouts.** Two sessions logged almost no distance for their length (2026-06-25 run: 59 min for 58 m; 2026-08-19 walk: 32 min for 152 m). Pace is left blank for any session under 500 m.
-- **Workouts are grouped by UTC calendar date** of their start time, since the SPORT file has no local-date field. A session starting near midnight UTC could land on the neighboring local day.
+- **Mixed timezones in the export.** `HEARTRATE_AUTO`, `ACTIVITY_MINUTE`, `ACTIVITY_STAGE` and `SLEEP_MINUTE` are in local time (IST, UTC+5:30). `SPORT` start times, `SLEEP` start/stop and `BODY` are UTC. The scripts convert everything to IST. The offset was confirmed by lining up workouts with heart-rate spikes: 79 of 129 sessions peak at exactly +5:30.
+- **The minute-level step file leaves out workout steps.** `ACTIVITY_MINUTE` doesn't include steps taken during logged workouts, so on run days its total falls short of the daily `ACTIVITY` figure.
+- **Respiratory rate is empty.** The `respiratory_rate` column in `SLEEP_MINUTE` has no values in either export.
 
 ## Adding a new export
 
-Drop the new export into the repo root as another `Health Data...` folder with the same 11 subfolders. The summary merges every `Health Data*` folder and de-duplicates overlapping days, so the workbook can be rebuilt to cover the new period.
+Drop the new export into the repo root as another `Health Data...` folder with the same 11 subfolders, then run:
+
+```bash
+python3 scripts/build_summary.py && python3 scripts/build_report.py
+```
+
+Each export becomes its own period (P3, P4, …). Overlapping days are de-duplicated, and the new period appears automatically in the workbook, the comparison tab and every chart. The written narrative in `report/REPORT.md` then needs updating to match the new numbers.

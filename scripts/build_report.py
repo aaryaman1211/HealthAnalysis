@@ -3,6 +3,7 @@
 Run: python3 scripts/build_report.py
 """
 
+import textwrap
 from datetime import timedelta
 
 import matplotlib
@@ -295,7 +296,7 @@ ax.set_xticks(range(0, 24, 2), [f"{h:02d}:00" for h in range(0, 24, 2)])
 ax.set_ylabel("Average heart rate (bpm)")
 ax.set_title("Average heart rate by hour of day (IST)")
 subtitle(ax, "The low plateau is sleep; its edges show when you fall asleep and wake up")
-ax.legend(loc="upper left")
+legend_periods(ax)
 save(fig, "04_intraday_heart_rate.png")
 
 # 05 intraday steps
@@ -313,7 +314,7 @@ ax.set_xticks(range(0, 24, 2), [f"{h:02d}:00" for h in range(0, 24, 2)])
 ax.set_ylabel("Avg steps in that hour")
 ax.set_title("When you move: average steps by hour of day (IST)")
 subtitle(ax, "Everyday movement only. The minute-level export leaves out steps taken during logged workouts")
-ax.grid(axis="x", visible=False); ax.legend(loc="upper left")
+ax.grid(axis="x", visible=False); legend_periods(ax)
 save(fig, "05_intraday_steps.png")
 
 # 06 weekday
@@ -329,7 +330,7 @@ for ax, col, name, fmt in [(axes[0], "steps", "Avg steps", "{:,.0f}"), (axes[1],
     ax.set_title(name, fontsize=11)
     ax.grid(axis="x", visible=False)
 axes[0].yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v / 1000:.0f}k"))
-axes[0].legend(loc="upper left")
+legend_periods(axes[0])
 fig.suptitle("Weekly rhythm", x=0.01, ha="left", fontsize=12.5, fontweight="bold")
 fig.tight_layout(rect=(0, 0, 1, 0.94))
 save(fig, "06_weekday_patterns.png")
@@ -361,7 +362,7 @@ for i, n in enumerate(NAMES):
             ax.text(b.get_x() + b.get_width() / 2, v, fmt.format(v), ha="center", va="bottom", fontsize=8, color=INK2)
 for ax, t in [(axes[0], "Minutes per night by stage"), (axes[1], "Share of time in bed by stage")]:
     ax.set_xticks(x, [s for _, s in stages]); ax.set_title(t, fontsize=11.5); ax.grid(axis="x", visible=False)
-axes[0].legend(loc="upper right")
+legend_periods(axes[0])
 save(fig, "08_sleep_stages.png")
 
 # 09 sleep timing
@@ -389,13 +390,13 @@ order_l = mix["count"].sum(axis=1).sort_values().index
 fig, axes = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
 y = np.arange(len(order_l))
 for i, n in enumerate(NAMES):
-    axes[0].barh(y + (i - 0.5) * 0.38, mix["count"][n].reindex(order_l), height=0.36, color=COLOR[n], label=LABEL[n], lw=0)
-    axes[1].barh(y + (i - 0.5) * 0.38, mix["sum"][n].reindex(order_l) / 60, height=0.36, color=COLOR[n], lw=0)
+    axes[0].barh(y + (0.5 - i) * 0.38, mix["count"][n].reindex(order_l), height=0.36, color=COLOR[n], label=LABEL[n], lw=0)
+    axes[1].barh(y + (0.5 - i) * 0.38, mix["sum"][n].reindex(order_l) / 60, height=0.36, color=COLOR[n], lw=0)
 axes[0].set_yticks(y, order_l)
 axes[0].set_title("Sessions by type", fontsize=11.5); axes[1].set_title("Hours by type", fontsize=11.5)
 for ax in axes:
     ax.grid(axis="y", visible=False)
-axes[0].legend(loc="lower right")
+legend_periods(axes[1])
 subtitle(axes[0], "Names inferred from Zepp type codes")
 fig.tight_layout()
 save(fig, "10_workout_mix.png")
@@ -413,7 +414,7 @@ for ax, col, t, yl in [(axes[0], "w_min", "Weekly workout time", "Hours"), (axes
         ax.hlines(vals[wagg.period == n].mean(), wagg.index[wagg.period == n].min(), wagg.index[wagg.period == n].max() + timedelta(days=6),
                   color=INK2, lw=1)
     ax.set_title(t, fontsize=11.5); ax.set_ylabel(yl); ax.grid(axis="x", visible=False)
-    subtitle(ax, " · ".join(f"{n} avg {vals[wagg.period == n].mean():.0f}" for n in NAMES) + " per week (grey line = period average)")
+    subtitle(ax, " · ".join(f"{n} avg {vals[wagg.period == n].mean():.1f}" for n in NAMES) + " per week (grey line = period average)")
     period_boundaries(ax)
 date_axis(axes[1]); legend_periods(axes[0], loc="upper right")
 fig.tight_layout()
@@ -428,7 +429,7 @@ for i, n in enumerate(NAMES):
 ax.set_xticks(range(0, 24, 2), [f"{h:02d}:00" for h in range(0, 24, 2)])
 ax.set_ylabel("Sessions started"); ax.grid(axis="x", visible=False)
 ax.set_title("When you train: workout start time (IST)")
-ax.legend(loc="upper left")
+legend_periods(ax)
 save(fig, "12_workout_timing.png")
 
 # 13 running
@@ -439,19 +440,22 @@ for n in NAMES:
     axes[1].scatter(r["date"], r["m_per_beat"], s=r["dist_m"] / 60 + 12, color=COLOR[n], alpha=0.75, lw=1.5, edgecolor=SURF, zorder=3)
 for ax, col in [(axes[0], "pace_min_km"), (axes[1], "m_per_beat")]:
     ok = runs[col].notna()
-    xs = mdates.date2num(runs.loc[ok, "date"])
-    lr = stats.linregress(xs, runs.loc[ok, col])
-    xx = np.array([xs.min(), xs.max()])
-    ax.plot(mdates.num2date(xx), lr.intercept + lr.slope * xx, color=INK2, lw=1)
+    days = (runs.loc[ok, "date"] - runs["date"].min()).dt.days
+    lr = stats.linregress(days, runs.loc[ok, col])
+    ends = [runs.loc[ok, "date"].min(), runs.loc[ok, "date"].max()]
+    ax.plot(ends, [lr.intercept + lr.slope * (e - runs["date"].min()).days for e in ends], color=INK2, lw=1)
+    pad = (runs[col].max() - runs[col].min()) * 0.12
+    ax.set_ylim(runs[col].min() - pad, runs[col].max() + pad)
+    subtitle(ax, f"Dot size = distance. Grey line = linear trend ({lr.slope * 30:+.3f} per 30 days, p = {fmt_p(lr.pvalue)})")
     period_boundaries(ax)
 for _, r in runs[runs["dist_m"] >= 9000].iterrows():
-    axes[0].annotate(f'{r["dist_m"] / 1000:.1f} km\n{clock_fmt(r["pace_min_km"]).replace(":", "′")}″/km', (r["date"], r["pace_min_km"]),
-                     textcoords="offset points", xytext=(8, -4), fontsize=8, color=INK2)
+    axes[0].annotate(f'{r["dist_m"] / 1000:.1f} km @ {clock_fmt(r["pace_min_km"])}/km', (r["date"], r["pace_min_km"]),
+                     textcoords="offset points", xytext=(9, -3), fontsize=8, color=INK2)
 axes[0].invert_yaxis()
-axes[0].yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{int(v)}:{int(round(v % 1 * 60)):02d}"))
-axes[0].set_ylabel("Pace (min/km), faster ↑"); axes[0].set_title("Run pace (dot size = distance)", fontsize=11.5)
+axes[0].yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(clock_fmt))
+axes[0].set_ylabel("Pace (min/km), faster ↑"); axes[0].set_title("Run pace", fontsize=11.5)
 axes[1].set_ylabel("Metres per heartbeat"); axes[1].set_title("Running efficiency: distance covered per heartbeat (higher = fitter)", fontsize=11.5)
-axes[0].legend(loc="lower left", markerscale=0.6)
+legend_periods(axes[0], marker=True)
 date_axis(axes[1]); fig.tight_layout()
 save(fig, "13_running.png")
 
@@ -464,10 +468,10 @@ for i, n in enumerate(NAMES):
     axes[0].bar(x + (i - 0.5) * 0.38, g["avg_hr"].mean().reindex(common), width=0.36, color=COLOR[n], label=LABEL[n], lw=0)
     axes[1].bar(x + (i - 0.5) * 0.38, g["kcal_min"].mean().reindex(common), width=0.36, color=COLOR[n], lw=0)
 for ax, t, yl in [(axes[0], "Average HR during session", "bpm"), (axes[1], "Calories per minute", "kcal/min")]:
-    ax.set_xticks(x, [c.replace(" (", "\n(") for c in common], fontsize=8.5); ax.set_title(t, fontsize=11.5)
+    ax.set_xticks(x, ["\n".join(textwrap.wrap(c, 13)) for c in common], fontsize=8.5); ax.set_title(t, fontsize=11.5)
     ax.set_ylabel(yl); ax.grid(axis="x", visible=False)
 axes[0].set_ylim(80, None)
-axes[0].legend(loc="upper left")
+legend_periods(axes[1])
 subtitle(axes[0], "Workout types with 3+ sessions in both periods")
 fig.tight_layout()
 save(fig, "14_session_intensity.png")
@@ -513,8 +517,9 @@ for ax, x, y, xl, yl, t in [
     ax.plot(xx, lr.intercept + lr.slope * xx, color=INK2, lw=1)
     ax.set_xlabel(xl); ax.set_ylabel(yl); ax.set_title(t, fontsize=11.5)
     subtitle(ax, f"Spearman ρ = {rho:+.2f}, p = {fmt_p(p)}, n = {len(ok)}")
-axes[0].legend(loc="upper right")
-fig.tight_layout()
+fig.legend(handles=[plt.Line2D([], [], color=COLOR[n], lw=0, marker="o", ms=7, label=LABEL[n]) for n in NAMES],
+           loc="upper right", ncol=len(NAMES), frameon=False)
+fig.tight_layout(rect=(0, 0, 1, 0.92))
 save(fig, "16_recovery.png")
 
 # 17 energy
