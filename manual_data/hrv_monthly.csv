@@ -1,0 +1,7 @@
+month,baseline_ms,min_ms,max_ms,last_reading_ms,last_reading_date,note
+2026-05,91,52,125,82,2026-05-31,Readings start around 14 May
+2026-06,83,55,122,70,2026-06-30,Gap of about 2 days around 25 Jun
+2026-07,80,64,94,94,2026-07-31,
+2026-08,81,58,117,95,2026-08-31,
+2026-09,83,63,108,94,2026-09-30,
+2026-10,82,55,112,82,2026-10-16,Partial month (1-16 Oct)

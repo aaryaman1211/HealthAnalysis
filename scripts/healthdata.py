@@ -90,6 +90,11 @@ def _period_of(dates, plist):
     return labels
 
 
+def load_hrv_monthly():
+    """Monthly HRV figures from the Zepp app; HRV isn't in the export, so they're entered by hand."""
+    return pd.read_csv(ROOT / "manual_data" / "hrv_monthly.csv", dtype={"month": str})
+
+
 def _export_profile_weights():
     return {i: float(_read(next((f / "USER").glob("*.csv")))["weight"].iloc[0]) for i, f in enumerate(export_folders())}
 
@@ -196,6 +201,8 @@ def build():
     daily["bed_clock"] = np.where(bed < 12, bed + 24, bed)  # hours after midnight of the previous day, e.g. 25.5 = 01:30
     daily["wake_clock"] = clock(daily["waketime"])
     daily["weekday"] = daily["date"].dt.day_name()
+    hrv = load_hrv_monthly()
+    daily["hrv_baseline"] = daily["date"].dt.strftime("%Y-%m").map(hrv.set_index("month")["baseline_ms"])
 
     # ---- energy expenditure (bottom-up, see ANALYSIS.md) ----
     bmr = 370 + 21.6 * WEIGHT_KG * (1 - BODY_FAT)
@@ -215,5 +222,5 @@ def build():
 
     return {
         "periods": plist, "daily": daily, "sessions": s, "hr": hr,
-        "steps_min": steps_min, "sleep_min": sleep_min, "body": body, "bmr": bmr,
+        "steps_min": steps_min, "sleep_min": sleep_min, "body": body, "bmr": bmr, "hrv_monthly": hrv,
     }

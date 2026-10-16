@@ -73,7 +73,7 @@ cols = [
     ("max_hr", "Max HR (bpm)", 10, "heart", "0"),
     ("sleep_hr_avg", "Sleeping HR (bpm)", 10, "heart", "0.0"),
     ("vigorous_min", f"Vigorous Minutes (HR ≥ {H.VIGOROUS_HR})", 12, "heart", "0"),
-    ("hrv", "HRV", 7, "heart", None),
+    ("hrv_baseline", "HRV Baseline (monthly, ms)", 10, "heart", "0"),
     ("workouts", "Workout(s)", 44, "workout", None),
     ("w_count", "Workout Count", 10, "workout", "0"),
     ("w_min", "Workout Minutes", 10, "workout", "0"),
@@ -94,7 +94,6 @@ for i, row in daily.iterrows():
     r = i + 2
     vals = row.to_dict()
     vals["week"] = f'={COL["date"]}{r}-WEEKDAY({COL["date"]}{r},3)'
-    vals["hrv"] = "N/A"
     vals["total_sleep"] = f'=IF(COUNT({COL["deep"]}{r}:{COL["rem"]}{r})=3,{COL["deep"]}{r}+{COL["light"]}{r}+{COL["rem"]}{r},"")'
     for ci, (key, _, _, section, fmt) in enumerate(cols, start=1):
         v = clean(vals.get(key))
@@ -102,7 +101,7 @@ for i, row in daily.iterrows():
             v = int(v) if v is not None else None
         cell = ds.cell(row=r, column=ci, value=v)
         cell.border = BORDER
-        cell.font = MUTED if key == "hrv" else (BOLD if key == "date" else BODY)
+        cell.font = BOLD if key == "date" else BODY
         if section:
             cell.fill = FILLS[section]
         if key != "workouts":
@@ -117,7 +116,8 @@ comments = {
     "rhr_min": "Lowest HEARTRATE_AUTO reading of the day. The export has no dedicated resting-HR field.",
     "sleep_hr_avg": "Average heart rate across the night's sleep (SLEEP_MINUTE), attached to the wake-up date.",
     "vigorous_min": f"Minutes with HR ≥ {H.VIGOROUS_HR} bpm (70% of age-predicted max {H.HR_MAX}).",
-    "hrv": "Not present in any export file.",
+    "hrv_baseline": "Monthly HRV baseline from the Zepp app, entered from screenshots (manual_data/hrv_monthly.csv). "
+                    "HRV isn't in the export, so every day of a month shows that month's baseline. See the HRV tab.",
     "bedtime": "Converted from the export's UTC timestamps to IST (UTC+5:30).",
     "tdee": "BMR (Katch-McArdle, 65 kg, 13% body fat) + non-workout step calories + workout calories. See ANALYSIS.md.",
 }
@@ -158,6 +158,25 @@ ws["I1"].comment = Comment(f"Blank when distance < {H.MIN_GPS_DISTANCE_M} m: tho
 ws["L1"].comment = Comment("Average of HEARTRATE_AUTO readings inside the session window.", "Claude")
 wrng = lambda c: f"'Workout Sessions'!${c}$2:${c}${n_sessions + 1}"
 
+# ---------------- HRV (monthly) ----------------
+hv = wb.create_sheet("HRV (Monthly)")
+header(hv, ["Month", "Baseline (ms)", "Monthly Min (ms)", "Monthly Max (ms)", "Last Reading (ms)", "Last Reading Date", "Note"],
+       [11, 11, 11, 11, 11, 13, 34])
+for r, m in enumerate(data["hrv_monthly"].itertuples(index=False), start=2):
+    row = [m.month, m.baseline_ms, m.min_ms, m.max_ms, m.last_reading_ms,
+           pd.Timestamp(m.last_reading_date).to_pydatetime(), m.note if isinstance(m.note, str) else None]
+    for c, v in enumerate(row, start=1):
+        cell = hv.cell(row=r, column=c, value=v)
+        cell.font, cell.border = BODY, BORDER
+        if c < 7:
+            cell.alignment = CENTER
+    hv.cell(row=r, column=6).number_format = "yyyy-mm-dd"
+hv_last = len(data["hrv_monthly"]) + 1
+hv.cell(row=hv_last + 2, column=1,
+        value="Source: Zepp app, Heart Rate Variability > Month view (overnight HRV). Entered by hand from screenshots; "
+              "daily values aren't available in the export.").font = MUTED
+hv.freeze_panes = "A2"
+
 # ---------------- Period Comparison ----------------
 pc = wb.create_sheet("Period Comparison")
 pc_cols = ["Metric"] + [period_label(p) for p in plist]
@@ -174,6 +193,7 @@ metrics = [
     ("Avg activity calories / day", avg("act_cal"), "#,##0"),
     ("Avg resting HR (bpm)", avg("rhr_min"), "0.0"),
     ("Avg sleeping HR (bpm)", avg("sleep_hr_avg"), "0.0"),
+    ("Avg HRV baseline (ms)", avg("hrv_baseline"), "0.0"),
     ("Avg daily HR (bpm)", avg("avg_hr"), "0.0"),
     ("Avg vigorous minutes / day", avg("vigorous_min"), "0.0"),
     ("Workout days", lambda p: f'=COUNTIFS({P},"{p}",{rng("w_count")},">0")', "0"),
@@ -269,7 +289,8 @@ notes = [
     ("Workouts are assigned to their IST calendar date.", None),
     ("Resting HR = lowest HEARTRATE_AUTO reading of the day. Sleeping HR = average HR across that night's sleep from SLEEP_MINUTE. There is no dedicated resting-HR field.", None),
     (f"Vigorous minutes = minutes with HR ≥ {H.VIGOROUS_HR} bpm (70% of an age-predicted max of {H.HR_MAX} for age {H.AGE}).", None),
-    ("HRV and respiratory rate are not recorded (the respiratory_rate column is empty in every export).", None),
+    ("HRV is not in the export. The HRV tab and the Daily Summary's HRV column use monthly figures read off the Zepp app (manual_data/hrv_monthly.csv); "
+     "add a row there each month to keep it current. Respiratory rate is not recorded (the column is empty in every export).", None),
     ("Active Minutes = total duration of ACTIVITY_STAGE movement segments for that date.", None),
     ("Activity Calories (device daily figure) already includes workout movement, so it overlaps Workout Calories; don't add them together.", None),
     ("Workout names are inferred from Zepp's numeric type codes by distance, pace and intensity; the export has no names.", None),

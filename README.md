@@ -43,6 +43,7 @@ Each period folder has the same 11 category subfolders:
     - workouts
     - the full sleep-stage breakdown, with the times you fell asleep and woke up
     - estimated calories burned
+  - **HRV (Monthly)**: monthly HRV baseline, minimum and maximum from the Zepp app (also repeated per day as a column in the Daily Summary).
   - **Workout Sessions**: all 139 workouts with inferred activity name, start time, duration, distance, pace (min/km), calories per minute, and average and max heart rate during the session.
   - **Period Comparison**: P1 vs P2 side by side, with change and % change. Every value is a live formula over the other tabs.
   - **Weekly Trends**: weekly averages for steps, resting and sleeping HR, sleep and workouts, with line charts.
@@ -60,7 +61,7 @@ Requires Python 3 with `pandas`, `numpy`, `scipy`, `matplotlib` and `openpyxl`.
 
 ## Known data-quality caveats
 
-- **No HRV.** Not recorded in either export.
+- **HRV isn't in the export.** Monthly HRV figures (baseline, min, max) are copied by hand from the Zepp app into `manual_data/hrv_monthly.csv`. Daily HRV values aren't available.
 - **No food or calorie-intake log.** Only calories *out* are recorded.
 - **No real weight trend.** There are two weight readings (63.0 kg on 2026-05-24, 65.0 kg on 2026-07-28), and the second looks like a profile update rather than a scale reading. So there's nothing to check any maintenance-calorie estimate against.
 - **Sleep `naps` field is a placeholder.** Every nap timestamp in both exports reads `2024-10-04`, well outside the real date range, so only nap *counts* are usable.
@@ -78,4 +79,4 @@ Drop the new export into the repo root as another `Health Data...` folder with t
 python3 scripts/build_summary.py && python3 scripts/build_report.py
 ```
 
-Each export becomes its own period (P3, P4, …). Overlapping days are de-duplicated, and the new period appears automatically in the workbook, the comparison tab and every chart. The written narrative in `report/REPORT.md` then needs updating to match the new numbers.
+Add a row to `manual_data/hrv_monthly.csv` for each new month of HRV from the Zepp app. Each export becomes its own period (P3, P4, …). Overlapping days are de-duplicated, and the new period appears automatically in the workbook, the comparison tab and every chart. The written narrative in `report/REPORT.md` then needs updating to match the new numbers.
